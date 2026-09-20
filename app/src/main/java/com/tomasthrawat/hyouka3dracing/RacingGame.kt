@@ -142,46 +142,46 @@ private fun RaceScreen(
     }
 
     val road = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF343941), unlit = true)
+        materialLoader.createColorInstance(Color(0xFF343941), roughness = 0.8f)
     }
     val roadLine = remember(materialLoader) {
-        materialLoader.createColorInstance(Color.White, unlit = true)
+        materialLoader.createColorInstance(Color.White, roughness = 0.8f)
     }
     val water = remember(materialLoader) {
-        materialLoader.createColorInstance(map.water, unlit = true)
+        materialLoader.createColorInstance(map.water, roughness = 0.8f)
     }
     val ground = remember(materialLoader) {
-        materialLoader.createColorInstance(map.ground, unlit = true)
+        materialLoader.createColorInstance(map.ground, roughness = 0.8f)
     }
     val barrierRed = remember(materialLoader) {
-        materialLoader.createColorInstance(map.accent, unlit = true)
+        materialLoader.createColorInstance(map.accent, roughness = 0.8f)
     }
     val barrierWhite = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFFF2F2F2), unlit = true)
+        materialLoader.createColorInstance(Color(0xFFF2F2F2), roughness = 0.8f)
     }
     val carBody = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF00A8FF), unlit = true)
+        materialLoader.createColorInstance(Color(0xFF00A8FF), roughness = 0.8f)
     }
     val carAccent = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFFFFC107), unlit = true)
+        materialLoader.createColorInstance(Color(0xFFFFC107), roughness = 0.8f)
     }
     val glass = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF101820), unlit = true)
+        materialLoader.createColorInstance(Color(0xFF101820), roughness = 0.8f)
     }
     val tire = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF111111), unlit = true)
+        materialLoader.createColorInstance(Color(0xFF111111), roughness = 0.8f)
     }
     val tree = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF238B45), unlit = true)
+        materialLoader.createColorInstance(Color(0xFF238B45), roughness = 0.8f)
     }
     val trunk = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF704214), unlit = true)
+        materialLoader.createColorInstance(Color(0xFF704214), roughness = 0.8f)
     }
     val gantry = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF607D8B), unlit = true)
+        materialLoader.createColorInstance(Color(0xFF607D8B), roughness = 0.8f)
     }
     val checkered = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFFECEFF1), unlit = true)
+        materialLoader.createColorInstance(Color(0xFFECEFF1), roughness = 0.8f)
     }
 
     var steer by remember { mutableFloatStateOf(0f) }
