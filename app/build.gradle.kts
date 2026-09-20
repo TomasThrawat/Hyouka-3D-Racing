@@ -55,7 +55,8 @@ val assetUrls = mapOf(
     "models/track_banked.glb" to "https://cdn.3dassets.dev/assets/15189/v1/model.glb",
     "models/guardrail.glb" to "https://cdn.3dassets.dev/assets/15210/v1/model.glb",
     "models/tower.glb" to "https://cdn.3dassets.dev/assets/14900/v1/model.glb",
-    "models/timing.glb" to "https://cdn.3dassets.dev/assets/15235/v1/model.glb"
+    "models/timing.glb" to "https://cdn.3dassets.dev/assets/15235/v1/model.glb",
+    "environments/studio_2k.hdr" to "https://raw.githubusercontent.com/sceneview/sceneview/main/samples/android-demo/src/main/assets/environments/studio_2k.hdr"
 )
 
 val downloadGameAssets by tasks.registering {
@@ -64,10 +65,25 @@ val downloadGameAssets by tasks.registering {
     doLast {
         assetUrls.forEach { (relativePath, url) ->
             val target = outputDir.file(relativePath).asFile
-            if (!target.exists() || target.length() == 0L) {
+            if (!target.exists() || target.length() < 1024L) {
                 target.parentFile.mkdirs()
                 target.outputStream().use { output ->
                     uri(url).toURL().openStream().use { input -> input.copyTo(output) }
+                }
+            }
+            require(target.exists() && target.length() >= 1024L) {
+                "Game asset download failed or returned an unexpectedly small file: " + relativePath + " (" + target.length() + " bytes)"
+            }
+            if (relativePath.endsWith(".glb")) {
+                val magic = target.inputStream().use { input -> ByteArray(4).also { input.read(it) } }
+                require(magic.contentEquals(byteArrayOf(0x67, 0x6C, 0x54, 0x46))) {
+                    "Invalid GLB asset (missing glTF magic): " + relativePath
+                }
+            }
+            if (relativePath.endsWith(".hdr")) {
+                val header = target.inputStream().use { input -> ByteArray(10).also { input.read(it) } }
+                require(String(header, Charsets.US_ASCII).startsWith("#?RADIANCE")) {
+                    "Invalid HDR environment: " + relativePath
                 }
             }
         }

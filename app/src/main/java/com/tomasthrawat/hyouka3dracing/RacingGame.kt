@@ -14,6 +14,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sceneview.SceneView
+import io.github.sceneview.SurfaceType
 import io.github.sceneview.createEnvironment
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
@@ -40,10 +41,12 @@ fun RacingGame(screen: MainActivity.Screen, onScreen: (MainActivity.Screen) -> U
     when (screen) {
         MainActivity.Screen.MENU -> MenuScreen { onScreen(MainActivity.Screen.MAPS) }
         MainActivity.Screen.MAPS -> MapScreen(
+            selectedIndex = selectedMap,
+            onSelect = { selectedMap = it },
             onBack = { onScreen(MainActivity.Screen.MENU) },
             onRace = { onScreen(MainActivity.Screen.RACE) }
         )
-        MainActivity.Screen.RACE -> RaceScreen { onScreen(MainActivity.Screen.MAPS) }
+        MainActivity.Screen.RACE -> RaceScreen(map = maps[selectedMap]) { onScreen(MainActivity.Screen.MAPS) }
     }
 }
 
@@ -80,16 +83,16 @@ private fun MapScreen(onBack: () -> Unit, onRace: () -> Unit) {
             ) {
                 maps.forEachIndexed { index, map ->
                     Button(
-                        onClick = { selected = index },
+                        onClick = { onSelect(index) },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (index == selected) Color.White else Color.DarkGray,
-                            contentColor = if (index == selected) Color.Black else Color.White
+                            containerColor = if (index == selectedIndex) Color.White else Color.DarkGray,
+                            contentColor = if (index == selectedIndex) Color.Black else Color.White
                         )
                     ) { Text(map.name) }
                 }
             }
             Text(
-                "MAP " + (selected + 1) + " • 3 LAPS • 4 RACERS",
+                "MAP " + (selectedIndex + 1) + " • 3 LAPS • 4 RACERS",
                 color = Color.LightGray,
                 modifier = Modifier.padding(28.dp)
             )
@@ -100,7 +103,7 @@ private fun MapScreen(onBack: () -> Unit, onRace: () -> Unit) {
 }
 
 @Composable
-private fun RaceScreen(onExit: () -> Unit) {
+private fun RaceScreen(map: RaceMap, onExit: () -> Unit) {
     val engine = rememberEngine()
     val loader = rememberModelLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
@@ -111,16 +114,19 @@ private fun RaceScreen(onExit: () -> Unit) {
         rotation = Rotation(x = -10f)
     }
     val environment = rememberEnvironment(environmentLoader) {
-        createEnvironment(environmentLoader)
+        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
+            ?: createEnvironment(environmentLoader)
     }
     val light = rememberMainLightNode(engine) { intensity = 120_000f }
 
-    val car = rememberModelInstance(loader, "models/car.glb")
+    val playerCar = rememberModelInstance(loader, "models/car.glb")
+    val opponentCar1 = rememberModelInstance(loader, "models/car.glb")
+    val opponentCar2 = rememberModelInstance(loader, "models/car.glb")
+    val opponentCar3 = rememberModelInstance(loader, "models/car.glb")
     val straight = rememberModelInstance(loader, "models/track_straight.glb")
     val start = rememberModelInstance(loader, "models/track_start.glb")
-    val corner = rememberModelInstance(loader, "models/track_corner90.glb")
-    val tower = rememberModelInstance(loader, "models/tower.glb")
-    val rail = rememberModelInstance(loader, "models/guardrail.glb")
+    val corner = rememberModelInstance(loader, map.corner)
+    val scenery = rememberModelInstance(loader, map.scenery)
 
     var steer by remember { mutableFloatStateOf(0f) }
     var speed by remember { mutableFloatStateOf(0f) }
@@ -160,6 +166,7 @@ private fun RaceScreen(onExit: () -> Unit) {
             environment = environment,
             cameraNode = cameraNode,
             mainLightNode = light,
+            surfaceType = SurfaceType.TextureSurface,
             autoCenterContent = false,
             autoFitContent = false
         ) {
@@ -175,26 +182,34 @@ private fun RaceScreen(onExit: () -> Unit) {
             corner?.let {
                 ModelNode(modelInstance = it, position = Position(z = -82f + distance), scaleToUnits = 1f)
             }
-            tower?.let {
+            scenery?.let {
                 ModelNode(modelInstance = it, position = Position(x = -9f, z = -25f), scaleToUnits = 1f)
             }
-            rail?.let {
-                ModelNode(modelInstance = it, position = Position(x = 7f, z = -30f), scaleToUnits = 1f)
-            }
-            car?.let {
+            playerCar?.let {
                 ModelNode(
                     modelInstance = it,
                     position = Position(x = steer * 2.5f, y = 0.05f, z = -3.2f),
                     scaleToUnits = 1.1f
                 )
+            }
+            opponentCar1?.let {
                 ModelNode(
                     modelInstance = it,
                     position = Position(x = -2.1f, y = 0.05f, z = -12f),
                     scaleToUnits = 1.1f
                 )
+            }
+            opponentCar2?.let {
                 ModelNode(
                     modelInstance = it,
                     position = Position(x = 2.0f, y = 0.05f, z = -18f),
+                    scaleToUnits = 1.1f
+                )
+            }
+            opponentCar3?.let {
+                ModelNode(
+                    modelInstance = it,
+                    position = Position(x = 0.8f, y = 0.05f, z = -25f),
                     scaleToUnits = 1.1f
                 )
             }
