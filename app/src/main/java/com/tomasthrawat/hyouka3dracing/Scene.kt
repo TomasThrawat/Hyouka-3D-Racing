@@ -3,18 +3,21 @@ package com.tomasthrawat.hyouka3dracing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
+import io.github.sceneview.node.DynamicSkyNode
 import io.github.sceneview.node.ModelNode
+import io.github.sceneview.node.PlaneNode
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
-import io.github.sceneview.rememberEnvironment
-import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberMainLightNode
+import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
+import io.github.sceneview.utils.colorOf
 
 private fun assetFor(kind: String): String = "models/track_" + kind + ".glb"
 
@@ -26,28 +29,43 @@ fun RaceScene(
 ) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
-    val environmentLoader = rememberEnvironmentLoader(engine)
-    val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
-            ?: environmentLoader.createEnvironment()
-    }
+    val materialLoader = rememberMaterialLoader(engine)
 
     val pose = Track.pose(map, snapshot.progress, 0f)
-    val cameraNode = rememberCameraNode(engine) {
-        position = Position(x = pose.x, y = 5.2f, z = pose.z + 10f)
-        rotation = Rotation(x = -16f, y = pose.yaw + 180f)
-    }
+    val headingRadians = Math.toRadians(pose.yaw.toDouble())
+    val directionX = kotlin.math.sin(headingRadians).toFloat()
+    val directionZ = kotlin.math.cos(headingRadians).toFloat()
+    val cameraDistance = 10f
 
-    cameraNode.position = Position(x = pose.x, y = 5.2f, z = pose.z + 10f)
-    cameraNode.rotation = Rotation(x = -16f, y = pose.yaw + 180f)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Position(
+            x = pose.x - directionX * cameraDistance,
+            y = 5.2f,
+            z = pose.z - directionZ * cameraDistance
+        )
+    }
+    cameraNode.position = Position(
+        x = pose.x - directionX * cameraDistance,
+        y = 5.2f,
+        z = pose.z - directionZ * cameraDistance
+    )
+    cameraNode.lookAt(Position(pose.x, 0.8f, pose.z))
 
     val light = rememberMainLightNode(engine) { intensity = 110_000f }
+    val groundMaterial = remember(materialLoader, map) {
+        val color = when (map) {
+            MapId.OCEAN -> Color(0xFF315B38)
+            MapId.DESERT -> Color(0xFF8A693D)
+            MapId.NIGHT -> Color(0xFF20252B)
+        }
+        materialLoader.createColorInstance(colorOf(color), metallic = 0f, roughness = 0.92f)
+    }
 
     SceneView(
         modifier = modifier,
         engine = engine,
         modelLoader = modelLoader,
-        environment = environment,
+        materialLoader = materialLoader,
         cameraNode = cameraNode,
         mainLightNode = light,
         surfaceType = SurfaceType.TextureSurface,
@@ -55,6 +73,22 @@ fun RaceScene(
         autoFitContent = false,
         cameraManipulator = null
     ) {
+        DynamicSkyNode(
+            timeOfDay = when (map) {
+                MapId.OCEAN -> 14f
+                MapId.DESERT -> 16.5f
+                MapId.NIGHT -> 21f
+            },
+            turbidity = 2.2f,
+            sunIntensity = if (map == MapId.NIGHT) 18_000f else 110_000f
+        )
+
+        PlaneNode(
+            size = io.github.sceneview.math.Size(420f, 420f),
+            materialInstance = groundMaterial,
+            position = Position(y = -0.08f)
+        )
+
         val player = rememberModelInstance(modelLoader, "models/car.glb")
         val ai1 = rememberModelInstance(modelLoader, "models/car_ai_1.glb")
         val ai2 = rememberModelInstance(modelLoader, "models/car_ai_2.glb")

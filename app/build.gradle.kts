@@ -12,8 +12,8 @@ android {
         applicationId = "com.tomasthrawat.hyouka3dracing"
         minSdk = 24
         targetSdk = 37
-        versionCode = 2
-        versionName = "2.0"
+        versionCode = 3
+        versionName = "2.1"
     }
     buildFeatures { compose = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
@@ -48,8 +48,7 @@ val assetUrls = mapOf(
     "models/track_s_bend.glb" to "https://cdn.3dassets.dev/assets/15188/v1/model.glb",
     "models/guardrail.glb" to "https://cdn.3dassets.dev/assets/15210/v1/model.glb",
     "models/tower.glb" to "https://cdn.3dassets.dev/assets/14900/v1/model.glb",
-    "models/timing.glb" to "https://cdn.3dassets.dev/assets/15235/v1/model.glb",
-    "environments/studio_2k.hdr" to "https://raw.githubusercontent.com/sceneview/sceneview/main/samples/android-demo/src/main/assets/environments/studio_2k.hdr"
+    "models/timing.glb" to "https://cdn.3dassets.dev/assets/15235/v1/model.glb"
 )
 
 val downloadGameAssets by tasks.registering {
@@ -73,14 +72,6 @@ val downloadGameAssets by tasks.registering {
                 }
                 require(magic.contentEquals(byteArrayOf(0x67, 0x6C, 0x54, 0x46))) {
                     "Invalid GLB: " + relativePath
-                }
-            }
-            if (relativePath.endsWith(".hdr")) {
-                val header = targetFile.inputStream().use { input ->
-                    ByteArray(10).also { input.read(it) }
-                }
-                require(String(header, Charsets.US_ASCII).startsWith("#?RADIANCE")) {
-                    "Invalid HDR: " + relativePath
                 }
             }
         }
