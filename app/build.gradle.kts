@@ -8,33 +8,20 @@ plugins {
 android {
     namespace = "com.tomasthrawat.hyouka3dracing"
     compileSdk = 37
-
     defaultConfig {
         applicationId = "com.tomasthrawat.hyouka3dracing"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
     }
-
-    buildFeatures {
-        compose = true
-    }
-
-    packaging {
-        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-    }
-
+    buildFeatures { compose = true }
+    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
+    kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 }
 
 dependencies {
@@ -48,6 +35,9 @@ dependencies {
 
 val assetUrls = mapOf(
     "models/car.glb" to "https://cdn.3dassets.dev/assets/15177/v1/model.glb",
+    "models/car_ai_1.glb" to "https://cdn.3dassets.dev/assets/15174/v1/model.glb",
+    "models/car_ai_2.glb" to "https://cdn.3dassets.dev/assets/15175/v1/model.glb",
+    "models/car_ai_3.glb" to "https://cdn.3dassets.dev/assets/15176/v1/model.glb",
     "models/track_start.glb" to "https://cdn.3dassets.dev/assets/15190/v1/model.glb",
     "models/track_straight.glb" to "https://cdn.3dassets.dev/assets/15182/v1/model.glb",
     "models/track_corner90.glb" to "https://cdn.3dassets.dev/assets/15184/v1/model.glb",
@@ -67,32 +57,33 @@ val downloadGameAssets by tasks.registering {
     outputs.dir(outputDir)
     doLast {
         assetUrls.forEach { (relativePath, url) ->
-            val target = outputDir.file(relativePath).asFile
-            if (!target.exists() || target.length() < 1024L) {
-                target.parentFile.mkdirs()
-                target.outputStream().use { output ->
+            val targetFile = outputDir.file(relativePath).asFile
+            if (!targetFile.exists() || targetFile.length() < 1024L) {
+                targetFile.parentFile.mkdirs()
+                targetFile.outputStream().use { output ->
                     uri(url).toURL().openStream().use { input -> input.copyTo(output) }
                 }
             }
-            require(target.exists() && target.length() >= 1024L) {
-                "Game asset download failed or returned an unexpectedly small file: " + relativePath + " (" + target.length() + " bytes)"
+            require(targetFile.exists() && targetFile.length() >= 1024L) {
+                "Game asset download failed: " + relativePath + " (" + targetFile.length() + " bytes)"
             }
             if (relativePath.endsWith(".glb")) {
-                val magic = target.inputStream().use { input -> ByteArray(4).also { input.read(it) } }
+                val magic = targetFile.inputStream().use { input ->
+                    ByteArray(4).also { input.read(it) }
+                }
                 require(magic.contentEquals(byteArrayOf(0x67, 0x6C, 0x54, 0x46))) {
-                    "Invalid GLB asset (missing glTF magic): " + relativePath
+                    "Invalid GLB: " + relativePath
                 }
             }
             if (relativePath.endsWith(".hdr")) {
-                val header = target.inputStream().use { input -> ByteArray(10).also { input.read(it) } }
+                val header = targetFile.inputStream().use { input ->
+                    ByteArray(10).also { input.read(it) }
+                }
                 require(String(header, Charsets.US_ASCII).startsWith("#?RADIANCE")) {
-                    "Invalid HDR environment: " + relativePath
+                    "Invalid HDR: " + relativePath
                 }
             }
         }
     }
 }
-
-tasks.named("preBuild") {
-    dependsOn(downloadGameAssets)
-}
+tasks.named("preBuild") { dependsOn(downloadGameAssets) }
