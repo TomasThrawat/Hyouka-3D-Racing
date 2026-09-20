@@ -15,25 +15,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
-import io.github.sceneview.createEnvironment
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
-import io.github.sceneview.node.ModelNode
+import io.github.sceneview.math.Size
+import io.github.sceneview.node.CubeNode
+import io.github.sceneview.node.CylinderNode
 import io.github.sceneview.rememberEngine
-import io.github.sceneview.rememberEnvironment
-import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberCameraNode
-import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
 import kotlin.math.min
 
-private data class RaceMap(val name: String, val corner: String, val scenery: String)
+private data class RaceMap(val name: String, val accent: Color)
+
 private val maps = listOf(
-    RaceMap("CITY GP", "models/track_corner90.glb", "models/tower.glb"),
-    RaceMap("DESERT RING", "models/track_banked.glb", "models/guardrail.glb"),
-    RaceMap("NIGHT CIRCUIT", "models/track_corner45.glb", "models/timing.glb")
+    RaceMap("CITY GP", Color(0xFF2E7D32)),
+    RaceMap("DESERT RING", Color(0xFFB56B2A)),
+    RaceMap("NIGHT CIRCUIT", Color(0xFF304FFE))
 )
 
 @Composable
@@ -48,7 +47,7 @@ fun RacingGame(screen: MainActivity.Screen, onScreen: (MainActivity.Screen) -> U
             onBack = { onScreen(MainActivity.Screen.MENU) },
             onRace = { onScreen(MainActivity.Screen.RACE) }
         )
-        MainActivity.Screen.RACE -> RaceScreen(map = maps[selectedMap]) {
+        MainActivity.Screen.RACE -> RaceScreen(maps[selectedMap]) {
             onScreen(MainActivity.Screen.MAPS)
         }
     }
@@ -114,25 +113,11 @@ private fun MapScreen(
 private fun RaceScreen(map: RaceMap, onExit: () -> Unit) {
     val engine = rememberEngine()
     val loader = rememberModelLoader(engine)
-    val environmentLoader = rememberEnvironmentLoader(engine)
     val cameraNode = rememberCameraNode(engine) {
-        position = Position(x = 0f, y = 3.2f, z = 10f)
-        rotation = Rotation(x = -10f)
+        position = Position(x = 0f, y = 3.6f, z = 10f)
+        rotation = Rotation(x = -12f)
     }
-    val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
-            ?: createEnvironment(environmentLoader)
-    }
-    val light = rememberMainLightNode(engine) { intensity = 120_000f }
-
-    val playerCar = rememberModelInstance(loader, "models/car.glb")
-    val opponentCar1 = rememberModelInstance(loader, "models/car.glb")
-    val opponentCar2 = rememberModelInstance(loader, "models/car.glb")
-    val opponentCar3 = rememberModelInstance(loader, "models/car.glb")
-    val straight = rememberModelInstance(loader, "models/track_straight.glb")
-    val start = rememberModelInstance(loader, "models/track_start.glb")
-    val corner = rememberModelInstance(loader, map.corner)
-    val scenery = rememberModelInstance(loader, map.scenery)
+    val light = rememberMainLightNode(engine) { intensity = 100_000f }
 
     var steer by remember { mutableFloatStateOf(0f) }
     var speed by remember { mutableFloatStateOf(0f) }
@@ -143,86 +128,95 @@ private fun RaceScreen(map: RaceMap, onExit: () -> Unit) {
     LaunchedEffect(Unit) {
         while (!finished) {
             delay(33)
-            speed = min(1f, speed + 0.015f)
-            distance += speed * 0.55f
+            speed = min(1f, speed + 0.018f)
+            distance += speed * 0.65f
             if (distance >= 180f) {
                 distance = 0f
                 if (lap == 3) finished = true else lap++
             }
-            steer *= 0.88f
+            steer *= 0.92f
         }
     }
 
-    Box(
-        Modifier.fillMaxSize().pointerInput(Unit) {
-            detectDragGestures(
-                onDragEnd = { steer = 0f },
-                onDragCancel = { steer = 0f },
-                onDrag = { change, amount ->
-                    change.consume()
-                    steer = (steer + amount.x / 700f).coerceIn(-1f, 1f)
-                }
-            )
-        }
-    ) {
+    Box(Modifier.fillMaxSize()) {
         SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = loader,
-            environment = environment,
             cameraNode = cameraNode,
             mainLightNode = light,
             surfaceType = SurfaceType.TextureSurface,
             autoCenterContent = false,
             autoFitContent = false
         ) {
-            start?.let {
-                ModelNode(modelInstance = it, position = Position(z = -8f), scaleToUnits = 1f)
-            }
-            straight?.let {
-                for (i in 0..8) {
-                    val z = -20f + i * 20f + distance % 20f
-                    ModelNode(modelInstance = it, position = Position(z = z), scaleToUnits = 1f)
-                }
-            }
-            corner?.let {
-                ModelNode(modelInstance = it, position = Position(z = -82f + distance), scaleToUnits = 1f)
-            }
-            scenery?.let {
-                ModelNode(modelInstance = it, position = Position(x = -9f, z = -25f), scaleToUnits = 1f)
-            }
-            playerCar?.let {
-                ModelNode(
-                    modelInstance = it,
-                    position = Position(x = steer * 2.5f, y = 0.05f, z = -3.2f),
-                    scaleToUnits = 1.1f
+            // Guaranteed visible procedural race surface. This removes the unrelated
+            // kitchen HDR asset that was being shown as the scene background.
+            for (i in 0..11) {
+                val z = -i * 18f + (distance % 18f)
+                CubeNode(
+                    size = Size(x = 12f, y = 0.18f, z = 18f),
+                    position = Position(y = -0.25f, z = z)
+                )
+                CubeNode(
+                    size = Size(x = 0.25f, y = 0.04f, z = 7f),
+                    position = Position(x = -2f, y = -0.14f, z = z)
+                )
+                CubeNode(
+                    size = Size(x = 0.25f, y = 0.04f, z = 7f),
+                    position = Position(x = 2f, y = -0.14f, z = z)
+                )
+                CubeNode(
+                    size = Size(x = 18f, y = 0.08f, z = 18f),
+                    position = Position(y = -0.35f, z = z)
                 )
             }
-            opponentCar1?.let {
-                ModelNode(
-                    modelInstance = it,
-                    position = Position(x = -2.1f, y = 0.05f, z = -12f),
-                    scaleToUnits = 1.1f
+
+            // Player car: procedural 3D model, so the race is visible even if a
+            // downloaded GLB has incompatible materials/textures.
+            CubeNode(
+                size = Size(x = 2.2f, y = 0.45f, z = 4.0f),
+                position = Position(x = steer * 3.2f, y = 0.15f, z = 0f)
+            )
+            CubeNode(
+                size = Size(x = 1.5f, y = 0.55f, z = 1.8f),
+                position = Position(x = steer * 3.2f, y = 0.55f, z = -0.35f)
+            )
+
+            val wheelX = 1.18f
+            val wheelZ = 1.15f
+            listOf(
+                Position(x = steer * 3.2f - wheelX, y = 0.0f, z = -wheelZ),
+                Position(x = steer * 3.2f + wheelX, y = 0.0f, z = -wheelZ),
+                Position(x = steer * 3.2f - wheelX, y = 0.0f, z = wheelZ),
+                Position(x = steer * 3.2f + wheelX, y = 0.0f, z = wheelZ)
+            ).forEach { wheel ->
+                CylinderNode(
+                    radius = 0.38f,
+                    height = 0.28f,
+                    sideCount = 16,
+                    position = wheel,
+                    rotation = Rotation(z = 90f)
                 )
             }
-            opponentCar2?.let {
-                ModelNode(
-                    modelInstance = it,
-                    position = Position(x = 2.0f, y = 0.05f, z = -18f),
-                    scaleToUnits = 1.1f
+
+            // Simple roadside scenery.
+            for (i in 0..7) {
+                val z = -i * 30f + (distance % 30f)
+                CubeNode(
+                    size = Size(x = 0.45f, y = 3.0f, z = 0.45f),
+                    position = Position(x = -8f, y = 1.35f, z = z)
                 )
-            }
-            opponentCar3?.let {
-                ModelNode(
-                    modelInstance = it,
-                    position = Position(x = 0.8f, y = 0.05f, z = -25f),
-                    scaleToUnits = 1.1f
+                CubeNode(
+                    size = Size(x = 0.45f, y = 3.0f, z = 0.45f),
+                    position = Position(x = 8f, y = 1.35f, z = z)
                 )
             }
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(18.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 18.dp, top = 18.dp, end = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("LAP " + lap + " / 3", color = Color.White, fontSize = 20.sp)
@@ -234,18 +228,54 @@ private fun RaceScreen(map: RaceMap, onExit: () -> Unit) {
             Button(onClick = onExit) { Text("MENU") }
         }
 
-        Box(
+        // Actual steering UI.
+        Row(
             Modifier
-                .align(Alignment.BottomStart)
-                .padding(24.dp)
-                .size(150.dp)
-                .background(Color(0x66000000))
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 22.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                "DRAG\nTO STEER",
-                color = Color.White,
-                modifier = Modifier.align(Alignment.Center)
-            )
+            Button(
+                onClick = { steer = (steer - 0.22f).coerceIn(-1f, 1f) },
+                modifier = Modifier.size(width = 86.dp, height = 62.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xCC222222),
+                    contentColor = Color.White
+                )
+            ) {
+                Text("◀", fontSize = 30.sp)
+            }
+
+            Box(
+                Modifier
+                    .size(width = 170.dp, height = 62.dp)
+                    .background(Color(0xAA111111))
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragEnd = { steer = 0f },
+                            onDragCancel = { steer = 0f },
+                            onDrag = { change, amount ->
+                                change.consume()
+                                steer = (steer + amount.x / 420f).coerceIn(-1f, 1f)
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("DRAG TO STEER", color = Color.White, fontSize = 14.sp)
+            }
+
+            Button(
+                onClick = { steer = (steer + 0.22f).coerceIn(-1f, 1f) },
+                modifier = Modifier.size(width = 86.dp, height = 62.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xCC222222),
+                    contentColor = Color.White
+                )
+            ) {
+                Text("▶", fontSize = 30.sp)
+            }
         }
 
         if (finished) {
