@@ -1,7 +1,6 @@
 package com.tomasthrawat.hyouka3dracing
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
@@ -19,28 +18,23 @@ import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
-import io.github.sceneview.math.Size
-import io.github.sceneview.node.ConeNode
-import io.github.sceneview.node.CubeNode
-import io.github.sceneview.node.CylinderNode
+import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMainLightNode
-import io.github.sceneview.rememberMaterialLoader
+import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
 
 private data class RaceMap(
     val name: String,
-    val accent: Color,
-    val water: Color,
-    val ground: Color
+    val sky: Color
 )
 
 private val maps = listOf(
-    RaceMap("OCEAN GP", Color(0xFFE53935), Color(0xFF1688D8), Color(0xFF4CAF50)),
-    RaceMap("DESERT RING", Color(0xFFFF8F00), Color(0xFF4FC3F7), Color(0xFFC98A45)),
-    RaceMap("NIGHT CIRCUIT", Color(0xFF7C4DFF), Color(0xFF101C3A), Color(0xFF263238))
+    RaceMap("OCEAN GP", Color(0xFF78C7EA)),
+    RaceMap("DESERT RING", Color(0xFFE7B66B)),
+    RaceMap("NIGHT CIRCUIT", Color(0xFF10152B))
 )
 
 @Composable
@@ -49,11 +43,8 @@ fun RacingGame(
     onScreen: (MainActivity.Screen) -> Unit
 ) {
     var selectedMap by remember { mutableIntStateOf(0) }
-
     when (screen) {
-        MainActivity.Screen.MENU -> MenuScreen {
-            onScreen(MainActivity.Screen.MAPS)
-        }
+        MainActivity.Screen.MENU -> MenuScreen { onScreen(MainActivity.Screen.MAPS) }
         MainActivity.Screen.MAPS -> MapScreen(
             selectedIndex = selectedMap,
             onSelect = { selectedMap = it },
@@ -69,15 +60,10 @@ fun RacingGame(
 
 @Composable
 private fun MenuScreen(onStart: () -> Unit) {
-    Box(
-        Modifier.fillMaxSize().background(Color(0xFF07111F)),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(Modifier.fillMaxSize().background(Color(0xFF07111F)), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("HYOUKA 3D RACING", color = Color.White, fontSize = 34.sp)
-            Spacer(Modifier.height(8.dp))
-            Text("NATIVE KOTLIN • 3D", color = Color(0xFFB8C7D9), fontSize = 15.sp)
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
             Button(onClick = onStart) { Text("START RACE") }
         }
     }
@@ -91,10 +77,7 @@ private fun MapScreen(
     onRace: () -> Unit
 ) {
     Box(Modifier.fillMaxSize().background(Color(0xFF07111F))) {
-        Column(
-            Modifier.fillMaxSize().padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Column(Modifier.fillMaxSize().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("SELECT MAP", color = Color.White, fontSize = 28.sp)
             Row(
                 Modifier.fillMaxWidth().padding(top = 30.dp),
@@ -104,89 +87,36 @@ private fun MapScreen(
                     Button(
                         onClick = { onSelect(index) },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (index == selectedIndex) map.accent else Color(0xFF30343B),
-                            contentColor = Color.White
+                            containerColor = if (index == selectedIndex) Color(0xFF7C4DFF) else Color(0xFF30343B)
                         )
-                    ) {
-                        Text(map.name)
-                    }
+                    ) { Text(map.name) }
                 }
             }
-            Text(
-                "MAP " + (selectedIndex + 1) + " • 3 LAPS • ARCADE RACE",
-                color = Color(0xFFB8C7D9),
-                modifier = Modifier.padding(28.dp)
-            )
+            Spacer(Modifier.height(28.dp))
+            Text("REAL GLB TRACK + CAR", color = Color(0xFFB8C7D9), fontSize = 16.sp)
+            Spacer(Modifier.height(18.dp))
             Button(onClick = onRace) { Text("RACE") }
-            Button(onClick = onBack, modifier = Modifier.padding(top = 8.dp)) {
-                Text("BACK")
-            }
+            Button(onClick = onBack, modifier = Modifier.padding(top = 8.dp)) { Text("BACK") }
         }
     }
 }
 
 @Composable
-private fun RaceScreen(
-    map: RaceMap,
-    onExit: () -> Unit
-) {
+private fun RaceScreen(map: RaceMap, onExit: () -> Unit) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
-    val materialLoader = rememberMaterialLoader(engine)
     val cameraNode = rememberCameraNode(engine) {
-        position = Position(x = 0f, y = 4.1f, z = 10.5f)
-        rotation = Rotation(x = -12f)
+        position = Position(x = 0f, y = 3.4f, z = 10f)
+        rotation = Rotation(x = -9f)
     }
-    val mainLight = rememberMainLightNode(engine) {
-        intensity = 110_000f
-    }
+    val mainLight = rememberMainLightNode(engine) { intensity = 120_000f }
 
-    val road = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF343941), roughness = 0.8f)
-    }
-    val roadLine = remember(materialLoader) {
-        materialLoader.createColorInstance(Color.White, roughness = 0.8f)
-    }
-    val water = remember(materialLoader) {
-        materialLoader.createColorInstance(map.water, roughness = 0.8f)
-    }
-    val ground = remember(materialLoader) {
-        materialLoader.createColorInstance(map.ground, roughness = 0.8f)
-    }
-    val barrierRed = remember(materialLoader) {
-        materialLoader.createColorInstance(map.accent, roughness = 0.8f)
-    }
-    val barrierWhite = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFFF2F2F2), roughness = 0.8f)
-    }
-    val carBody = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF00A8FF), roughness = 0.8f)
-    }
-    val carAccent = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFFFFC107), roughness = 0.8f)
-    }
-    val glass = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF101820), roughness = 0.8f)
-    }
-    val tire = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF111111), roughness = 0.8f)
-    }
-    val tree = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF238B45), roughness = 0.8f)
-    }
-    val trunk = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF704214), roughness = 0.8f)
-    }
-    val gantry = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFF607D8B), roughness = 0.8f)
-    }
-    val checkered = remember(materialLoader) {
-        materialLoader.createColorInstance(Color(0xFFECEFF1), roughness = 0.8f)
-    }
-
-    var steer by remember { mutableFloatStateOf(0f) }
-    var speed by remember { mutableFloatStateOf(280f) }
+    var steering by remember { mutableFloatStateOf(0f) }
+    var throttle by remember { mutableFloatStateOf(0f) }
+    var brake by remember { mutableFloatStateOf(0f) }
+    var speed by remember { mutableFloatStateOf(140f) }
     var distance by remember { mutableFloatStateOf(0f) }
+    var travel by remember { mutableFloatStateOf(0f) }
     var lap by remember { mutableIntStateOf(1) }
     var finished by remember { mutableStateOf(false) }
 
@@ -194,18 +124,30 @@ private fun RaceScreen(
         while (!finished) {
             delay(33)
             val dt = 0.033f
+            val target = when {
+                throttle > 0f -> 320f
+                brake > 0f -> 0f
+                else -> 110f
+            }
+            val response = if (throttle > 0f || brake > 0f) 5.0f else 1.8f
+            speed += (target - speed) * response * dt
+            speed = speed.coerceIn(0f, 320f)
+            val movement = speed * dt * 0.018f
             distance += speed * dt * 0.045f
+            travel += movement
+            if (travel >= 58f) travel = 0f
             if (distance >= 180f) {
                 distance = 0f
                 if (lap >= 3) finished = true else lap++
             }
-            steer *= 0.90f
         }
     }
 
-    Box(
-        Modifier.fillMaxSize().background(Color(0xFF71B8EA))
-    ) {
+    LaunchedEffect(travel) {
+        cameraNode.position = Position(x = 0f, y = 3.4f, z = 10f - travel)
+    }
+
+    Box(Modifier.fillMaxSize().background(map.sky)) {
         SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
@@ -216,181 +158,133 @@ private fun RaceScreen(
             autoCenterContent = false,
             autoFitContent = false
         ) {
-            CubeNode(
-                size = Size(x = 120f, y = 0.25f, z = 260f),
-                materialInstance = water,
-                position = Position(y = -1.0f, z = -105f)
-            )
-            CubeNode(
-                size = Size(x = 80f, y = 0.5f, z = 80f),
-                materialInstance = ground,
-                position = Position(x = -42f, y = -0.65f, z = -58f)
-            )
-            CubeNode(
-                size = Size(x = 75f, y = 0.5f, z = 70f),
-                materialInstance = ground,
-                position = Position(x = 43f, y = -0.65f, z = -92f)
-            )
+            val car = rememberModelInstance(modelLoader, "models/car.glb")
+            val start = rememberModelInstance(modelLoader, "models/track_start.glb")
+            val straight = rememberModelInstance(modelLoader, "models/track_straight.glb")
+            val corner45 = rememberModelInstance(modelLoader, "models/track_corner45.glb")
+            val corner90 = rememberModelInstance(modelLoader, "models/track_corner90.glb")
+            val banked = rememberModelInstance(modelLoader, "models/track_banked.glb")
+            val guardrail = rememberModelInstance(modelLoader, "models/guardrail.glb")
+            val tower = rememberModelInstance(modelLoader, "models/tower.glb")
+            val timing = rememberModelInstance(modelLoader, "models/timing.glb")
 
-            for (i in 0..15) {
-                val z = -i * 12f + (distance % 12f)
-                CubeNode(
-                    size = Size(x = 12f, y = 0.22f, z = 12f),
-                    materialInstance = road,
-                    position = Position(y = -0.25f, z = z)
-                )
-                CubeNode(
-                    size = Size(x = 0.16f, y = 0.025f, z = 5.5f),
-                    materialInstance = roadLine,
-                    position = Position(x = 0f, y = -0.10f, z = z)
-                )
-
-                val barrierMaterial = if (i % 2 == 0) barrierRed else barrierWhite
-                CubeNode(
-                    size = Size(x = 0.38f, y = 0.65f, z = 12f),
-                    materialInstance = barrierMaterial,
-                    position = Position(x = -6.25f, y = 0.05f, z = z)
-                )
-                CubeNode(
-                    size = Size(x = 0.38f, y = 0.65f, z = 12f),
-                    materialInstance = barrierMaterial,
-                    position = Position(x = 6.25f, y = 0.05f, z = z)
+            car?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 2.4f,
+                    centerOrigin = Position(x = 0f, y = -1f, z = 0f),
+                    position = Position(x = steering * 2.6f, y = 0f, z = 2.0f - travel),
+                    rotation = Rotation(y = steering * 10f),
+                    autoAnimate = true
                 )
             }
 
-            for (i in 0..8) {
-                val z = -i * 22f + (distance % 22f)
-                CubeNode(
-                    size = Size(x = 0.55f, y = 2.6f, z = 0.55f),
-                    materialInstance = trunk,
-                    position = Position(x = -9f, y = 1.0f, z = z)
-                )
-                ConeNode(
-                    radius = 2.0f,
-                    height = 4.4f,
-                    sideCount = 8,
-                    materialInstance = tree,
-                    position = Position(x = -9f, y = 4.2f, z = z)
-                )
-                CubeNode(
-                    size = Size(x = 0.55f, y = 2.6f, z = 0.55f),
-                    materialInstance = trunk,
-                    position = Position(x = 9f, y = 1.0f, z = z - 9f)
-                )
-                ConeNode(
-                    radius = 2.0f,
-                    height = 4.4f,
-                    sideCount = 8,
-                    materialInstance = tree,
-                    position = Position(x = 9f, y = 4.2f, z = z - 9f)
-                )
+            val layout = when (map.name) {
+                "DESERT RING" -> listOf(0f, -18f, -34f, -50f, -66f)
+                "NIGHT CIRCUIT" -> listOf(0f, -22f, -40f, -58f, -74f)
+                else -> listOf(0f, -16f, -32f, -48f, -64f)
             }
 
-            val checkpointZ = -48f + (distance % 48f)
-            CubeNode(
-                size = Size(x = 0.28f, y = 4.2f, z = 0.28f),
-                materialInstance = gantry,
-                position = Position(x = -4.8f, y = 2.0f, z = checkpointZ)
-            )
-            CubeNode(
-                size = Size(x = 0.28f, y = 4.2f, z = 0.28f),
-                materialInstance = gantry,
-                position = Position(x = 4.8f, y = 2.0f, z = checkpointZ)
-            )
-            CubeNode(
-                size = Size(x = 9.9f, y = 0.28f, z = 0.28f),
-                materialInstance = gantry,
-                position = Position(y = 4.0f, z = checkpointZ)
-            )
-            CubeNode(
-                size = Size(x = 3.6f, y = 0.16f, z = 0.16f),
-                materialInstance = checkered,
-                position = Position(y = 3.98f, z = checkpointZ - 0.18f)
-            )
-
-            val carX = steer * 2.8f
-            CubeNode(
-                size = Size(x = 2.25f, y = 0.48f, z = 4.0f),
-                materialInstance = carBody,
-                position = Position(x = carX, y = 0.25f, z = 1.2f)
-            )
-            CubeNode(
-                size = Size(x = 1.55f, y = 0.58f, z = 1.85f),
-                materialInstance = glass,
-                position = Position(x = carX, y = 0.70f, z = 0.65f)
-            )
-            CubeNode(
-                size = Size(x = 2.05f, y = 0.12f, z = 0.42f),
-                materialInstance = carAccent,
-                position = Position(x = carX, y = 0.53f, z = -0.65f)
-            )
-
-            val wheelX = 1.16f
-            val wheelZ = 1.15f
-            listOf(
-                Position(carX - wheelX, 0.02f, 1.2f - wheelZ),
-                Position(carX + wheelX, 0.02f, 1.2f - wheelZ),
-                Position(carX - wheelX, 0.02f, 1.2f + wheelZ),
-                Position(carX + wheelX, 0.02f, 1.2f + wheelZ)
-            ).forEach { wheel ->
-                CylinderNode(
-                    radius = 0.38f,
-                    height = 0.30f,
-                    sideCount = 16,
-                    materialInstance = tire,
-                    position = wheel,
-                    rotation = Rotation(z = 90f)
+            start?.let {
+                ModelNode(modelInstance = it, scaleToUnits = 12f, position = Position(z = -14f + layout[0]))
+            }
+            straight?.let {
+                ModelNode(modelInstance = it, scaleToUnits = 12f, position = Position(z = -14f + layout[1]))
+            }
+            corner45?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 12f,
+                    position = Position(
+                        x = if (map.name == "NIGHT CIRCUIT") 3f else -3f,
+                        z = -14f + layout[2]
+                    ),
+                    rotation = Rotation(y = if (map.name == "DESERT RING") -30f else 25f)
+                )
+            }
+            corner90?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 12f,
+                    position = Position(
+                        x = if (map.name == "DESERT RING") -3f else 4f,
+                        z = -14f + layout[3]
+                    ),
+                    rotation = Rotation(y = if (map.name == "NIGHT CIRCUIT") 90f else -35f)
+                )
+            }
+            banked?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 12f,
+                    position = Position(z = -14f + layout[4]),
+                    rotation = Rotation(y = if (map.name == "OCEAN GP") 180f else 0f)
+                )
+            }
+            guardrail?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 2.5f,
+                    position = Position(x = -7f, y = 0f, z = -34f)
+                )
+            }
+            tower?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 5f,
+                    position = Position(x = -9f, y = 0f, z = -52f)
+                )
+            }
+            timing?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 10f,
+                    position = Position(z = -42f)
                 )
             }
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, top = 22.dp),
+            Modifier.fillMaxWidth().padding(24.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
             Text(
-                "LAP " + lap + " / 3",
+                "LAP \$lap / 3",
                 color = Color.White,
                 fontSize = 22.sp,
-                modifier = Modifier.background(Color(0xAA19324A)).padding(horizontal = 18.dp, vertical = 10.dp)
+                modifier = Modifier.background(Color(0xCC101820)).padding(12.dp, 8.dp)
             )
             Text(
-                "SPEED " + speed.toInt() + " KM/H",
+                "\${speed.toInt()} KM/H",
                 color = Color.White,
-                fontSize = 22.sp,
-                modifier = Modifier.background(Color(0xAA19324A)).padding(horizontal = 18.dp, vertical = 10.dp)
+                fontSize = 24.sp,
+                modifier = Modifier.background(Color(0xCC101820)).padding(14.dp, 8.dp)
             )
             Button(onClick = onExit) { Text("MENU") }
         }
 
-        Row(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(start = 24.dp, end = 24.dp, bottom = 20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            ControlButton("◀") { steer = -1f }
-
-            Column(
-                Modifier
-                    .widthIn(min = 260.dp, max = 430.dp)
-                    .background(Color(0xCC15191E))
-                    .padding(horizontal = 18.dp, vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Text("STEERING", color = Color.White, fontSize = 13.sp)
+            Slider(
+                modifier = Modifier.width(330.dp),
+                value = steering,
+                onValueChange = { steering = it },
+                valueRange = -1f..1f
+            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
             ) {
-                Text("DRAG TO STEER", color = Color.White, fontSize = 14.sp)
-                Slider(
-                    value = speed,
-                    onValueChange = { speed = it.coerceIn(0f, 320f) },
-                    valueRange = 0f..320f
-                )
-                Text(speed.toInt().toString() + " KM/H", color = Color.White, fontSize = 16.sp)
+                HoldButton("BRAKE", Color(0xFFB71C1C), { brake = 1f }) { brake = 0f }
+                HoldButton("◀", Color(0xFF30343B), { steering = -1f }) { steering = 0f }
+                HoldButton("ACCEL", Color(0xFF1565C0), { throttle = 1f }) { throttle = 0f }
+                HoldButton("▶", Color(0xFF30343B), { steering = 1f }) { steering = 0f }
             }
-
-            ControlButton("▶") { steer = 1f }
         }
 
         if (finished) {
@@ -400,10 +294,8 @@ private fun RaceScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("FINISH", color = Color.White, fontSize = 42.sp)
-                    Text("RACE COMPLETE", color = Color.LightGray, fontSize = 18.sp)
-                    Button(onClick = onExit, modifier = Modifier.padding(top = 20.dp)) {
-                        Text("BACK TO MAPS")
-                    }
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = onExit) { Text("BACK TO MAPS") }
                 }
             }
         }
@@ -411,24 +303,27 @@ private fun RaceScreen(
 }
 
 @Composable
-private fun ControlButton(
+private fun HoldButton(
     label: String,
-    onSteer: () -> Unit
+    color: Color,
+    onDown: () -> Unit,
+    onUp: () -> Unit
 ) {
     Box(
         Modifier
-            .size(92.dp)
-            .background(Color(0xDD24282D))
+            .size(width = 108.dp, height = 76.dp)
+            .background(color)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
-                        onSteer()
+                        onDown()
                         tryAwaitRelease()
+                        onUp()
                     }
                 )
             },
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = Color.White, fontSize = 34.sp)
+        Text(label, color = Color.White, fontSize = 17.sp)
     }
 }
