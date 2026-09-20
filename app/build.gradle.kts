@@ -47,12 +47,15 @@ dependencies {
 }
 
 val assetUrls = mapOf(
-    "models/car.glb" to "https://cdn.3dassets.dev/assets/14838/v1/model.glb",
+    "models/car.glb" to "https://cdn.3dassets.dev/assets/15177/v1/model.glb",
     "models/track_start.glb" to "https://cdn.3dassets.dev/assets/15190/v1/model.glb",
     "models/track_straight.glb" to "https://cdn.3dassets.dev/assets/15182/v1/model.glb",
     "models/track_corner90.glb" to "https://cdn.3dassets.dev/assets/15184/v1/model.glb",
     "models/track_corner45.glb" to "https://cdn.3dassets.dev/assets/15185/v1/model.glb",
     "models/track_banked.glb" to "https://cdn.3dassets.dev/assets/15189/v1/model.glb",
+    "models/track_hairpin.glb" to "https://cdn.3dassets.dev/assets/15186/v1/model.glb",
+    "models/track_chicane.glb" to "https://cdn.3dassets.dev/assets/15187/v1/model.glb",
+    "models/track_s_bend.glb" to "https://cdn.3dassets.dev/assets/15188/v1/model.glb",
     "models/guardrail.glb" to "https://cdn.3dassets.dev/assets/15210/v1/model.glb",
     "models/tower.glb" to "https://cdn.3dassets.dev/assets/14900/v1/model.glb",
     "models/timing.glb" to "https://cdn.3dassets.dev/assets/15235/v1/model.glb",

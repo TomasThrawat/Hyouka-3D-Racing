@@ -122,8 +122,8 @@ private fun RaceScreen(map: RaceMap, onExit: () -> Unit) {
 
     LaunchedEffect(Unit) {
         while (!finished) {
-            delay(33)
-            val dt = 0.033f
+            delay(16)
+            val dt = 0.016f
             val target = when {
                 throttle > 0f -> 320f
                 brake > 0f -> 0f
@@ -164,6 +164,9 @@ private fun RaceScreen(map: RaceMap, onExit: () -> Unit) {
             val corner45 = rememberModelInstance(modelLoader, "models/track_corner45.glb")
             val corner90 = rememberModelInstance(modelLoader, "models/track_corner90.glb")
             val banked = rememberModelInstance(modelLoader, "models/track_banked.glb")
+            val hairpin = rememberModelInstance(modelLoader, "models/track_hairpin.glb")
+            val chicane = rememberModelInstance(modelLoader, "models/track_chicane.glb")
+            val sBend = rememberModelInstance(modelLoader, "models/track_s_bend.glb")
             val guardrail = rememberModelInstance(modelLoader, "models/guardrail.glb")
             val tower = rememberModelInstance(modelLoader, "models/tower.glb")
             val timing = rememberModelInstance(modelLoader, "models/timing.glb")
@@ -218,6 +221,30 @@ private fun RaceScreen(map: RaceMap, onExit: () -> Unit) {
                     modelInstance = it,
                     scaleToUnits = 12f,
                     position = Position(z = -14f + layout[4]),
+                    rotation = Rotation(y = if (map.name == "OCEAN GP") 180f else 0f)
+                )
+            }
+            hairpin?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 12f,
+                    position = Position(x = -2.5f, z = -14f + layout[4]),
+                    rotation = Rotation(y = if (map.name == "DESERT RING") 180f else 0f)
+                )
+            }
+            chicane?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 12f,
+                    position = Position(x = 2.5f, z = -14f + layout[3]),
+                    rotation = Rotation(y = if (map.name == "NIGHT CIRCUIT") 90f else -90f)
+                )
+            }
+            sBend?.let {
+                ModelNode(
+                    modelInstance = it,
+                    scaleToUnits = 12f,
+                    position = Position(x = 0f, z = -14f + layout[2]),
                     rotation = Rotation(y = if (map.name == "OCEAN GP") 180f else 0f)
                 )
             }
