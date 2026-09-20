@@ -38,6 +38,8 @@ private val maps = listOf(
 
 @Composable
 fun RacingGame(screen: MainActivity.Screen, onScreen: (MainActivity.Screen) -> Unit) {
+    var selectedMap by remember { mutableIntStateOf(0) }
+
     when (screen) {
         MainActivity.Screen.MENU -> MenuScreen { onScreen(MainActivity.Screen.MAPS) }
         MainActivity.Screen.MAPS -> MapScreen(
@@ -46,7 +48,9 @@ fun RacingGame(screen: MainActivity.Screen, onScreen: (MainActivity.Screen) -> U
             onBack = { onScreen(MainActivity.Screen.MENU) },
             onRace = { onScreen(MainActivity.Screen.RACE) }
         )
-        MainActivity.Screen.RACE -> RaceScreen(map = maps[selectedMap]) { onScreen(MainActivity.Screen.MAPS) }
+        MainActivity.Screen.RACE -> RaceScreen(map = maps[selectedMap]) {
+            onScreen(MainActivity.Screen.MAPS)
+        }
     }
 }
 
@@ -69,8 +73,12 @@ private fun MenuScreen(onStart: () -> Unit) {
 }
 
 @Composable
-private fun MapScreen(onBack: () -> Unit, onRace: () -> Unit) {
-    var selected by remember { mutableIntStateOf(0) }
+private fun MapScreen(
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    onBack: () -> Unit,
+    onRace: () -> Unit
+) {
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Column(
             Modifier.fillMaxSize().padding(28.dp),
@@ -107,8 +115,6 @@ private fun RaceScreen(map: RaceMap, onExit: () -> Unit) {
     val engine = rememberEngine()
     val loader = rememberModelLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
-    // SceneView starts its main camera at the origin unless a cameraNode is supplied.
-    // The race content is placed down the -Z axis, so the camera must start behind it.
     val cameraNode = rememberCameraNode(engine) {
         position = Position(x = 0f, y = 3.2f, z = 10f)
         rotation = Rotation(x = -10f)
